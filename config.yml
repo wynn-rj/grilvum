@@ -1,0 +1,9 @@
+extensions:
+  - addons.admin_commands
+  - extensions.party_funds
+prefix: 
+  dev: "?"
+  release: "!"
+playing: 
+  dev: "in development | {prefix}help"
+  release: "party packmule | {prefix}help"

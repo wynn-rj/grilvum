@@ -4,6 +4,7 @@ database:
 extensions:
   - addons.admin_commands
   - addons.error_handling
+  - addons.update_commands
   - extensions.party_funds
 prefix: 
   dev: "?"

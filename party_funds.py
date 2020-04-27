@@ -107,6 +107,14 @@ class PartyFunds(commands.Cog):
         await ctx.send(f'{amount} GP(s) of party fund spent. ' \
                        f'Now at {new_total} GP(s)')
 
+    @funds.command(hidden=True)
+    async def fix(self, ctx):
+        admins = YAMLConfigReader('/config/administration.yml').data.admins
+        if not str(ctx.author) in admins:
+            return
+        await self.on_guild_join(ctx.guild)
+        await ctx.send('Fix run on server')
+
 def setup(bot):
     """Add the extension as a cog"""
     bot.add_cog(PartyFunds(bot))

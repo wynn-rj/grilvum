@@ -1,0 +1,9 @@
+
+
+
+CREATE TABLE "bag_of_holding" (
+        "ID" INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
+		"Guild_ID" INTEGER,
+        "Item" CHAR,
+        "Quantity" INTEGER
+			FOREIGN KEY(Guild_ID) REFERENCES server(ID))

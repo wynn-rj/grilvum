@@ -21,71 +21,93 @@ class BagOfHolding(commands.Cog):
             conn.close()
         return result if len(result) > 0 else None
 
-    def add_to_bag(self, guild, item):
+    def add_to_bag(self, guild, item, quantity):
         conn = sqlite3.connect(self.config.data.database)
         try:
             cur = conn.cursor()
             cur.execute("SELECT Quantity FROM bag_of_holding WHERE Item IS ? AND Guild_ID = ?",
                         (item, guild.id))
             result = cur.fetchone()
-            if result != None:
+            if result is not None:
                 cur.execute("UPDATE bag_of_holding SET Quantity = ? WHERE Item IS ? AND Guild_ID = ?",
-                            (result[0] + 1,item, guild.id))
+                            (int(result[0]) + int(quantity), item, guild.id))
 
             else:
                 cur.execute("INSERT INTO bag_of_holding (Guild_ID, Item, Quantity) VALUES(?,?,?)",
-                            (guild.id, item, 1))
+                            (guild.id, item, quantity))
             conn.commit()
         finally:
             conn.close()
-    def remove_from_bag(self, guild, item):
+
+    def remove_from_bag(self, guild, item, quantity):
         conn = sqlite3.connect(self.config.data.database)
         try:
             cur = conn.cursor()
             cur.execute("SELECT Quantity FROM bag_of_holding WHERE Item IS ? AND Guild_ID = ?",
                         (item, guild.id))
             result = cur.fetchone()
-            if result != None:
-                if result[0] <= 1:
+            if result is not None:
+                if int(result[0]) - int(quantity) < 1:
                     cur.execute("DELETE FROM bag_of_holding WHERE Item = ? AND Guild_ID = ?",
                                 (item, guild.id))
                 else:
                     cur.execute("UPDATE bag_of_holding SET Quantity = ? WHERE Item IS ? AND Guild_ID = ?",
-                                (result[0] -1,item, guild.id))
+                                (int(result[0]) - int(quantity), item, guild.id))
+            else:
+                return 0
             conn.commit()
+            return 1
         finally:
             conn.close()
 
     @commands.group(pass_context=True, help="Manage bag of holding")
-    async def items(self, ctx):
+    async def bagOfHolding(self, ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send('Invalid subcommand')
 
-    @items.command()
-    async def putInBag(self, ctx, item: str):
-        self.add_to_bag(ctx.guild, item)
-        await ctx.send(f'{item} successfully added to bag of holding')
+    @bagOfHolding.command()
+    async def addItem(self, ctx, item: str):
+        self.add_to_bag(ctx.guild, item, 1)
+        await ctx.send(f'{item} successfully added to the Bag of Holding')
 
-    @items.command()
+    @bagOfHolding.command()
+    async def addItems(self, ctx, item: str, quantity):
+        self.add_to_bag(ctx.guild, item, quantity)
+        await ctx.send(f'{item}({quantity}) successfully added to the Bag of Holding')
+
+    @bagOfHolding.command()
     async def dump(self, ctx):
         party_bag = self.get_party_bag(ctx.guild)
         if party_bag is None:
-            await ctx.send('Failed to get party bag of holding')
+            await ctx.send('Failed to get party Bag of Holding')
             return
-        else:
-            await ctx.send('Successfully got the party bag of holding')
 
-        print_string = ''
+        print_string = 'The Bag of Holding Contains:'
         for item in party_bag:
-            print_string += f'Bag currently holds:\n{item[0]}: {item[1]}\n'
+            print_string += f'\n{item[0]}'
+            if item[1] > 1:
+                print_string += f': {item[1]}'
+
         await ctx.send(print_string)
 
-    @items.command()
-    async def removeFromBag(self, ctx, item: str):
-        self.remove_from_bag(ctx.guild, item)
-        await ctx.send(f'{item} removed from the bag of holding')
+    @bagOfHolding.command()
+    async def removeItem(self, ctx, item: str):
+        result = self.remove_from_bag(ctx.guild, item, 1)
+        await ctx.send(f'{item} removed from the Bag of Holding')
+        if result == 1:
+            await ctx.send(f'{item} removed from the Bag of Holding')
+        else:
+            await ctx.send(f'{item} not found')
 
-    @items.command(hidden=True)
+    @bagOfHolding.command()
+    async def removeItems(self, ctx, item: str, quantity):
+        result = self.remove_from_bag(ctx.guild, item, quantity)
+        if result == 1:
+            await ctx.send(f'{item}({quantity}) removed from the Bag of Holding')
+        else:
+            await ctx.send(f'{item} not found')
+
+    @bagOfHolding.command(hidden=True)
     async def fix(self, ctx):
         admins = YAMLConfigReader('/config/administration.yml').data.admins
         if not str(ctx.author) in admins:

@@ -61,21 +61,16 @@ class BagOfHolding(commands.Cog):
             conn.close()
 
     @commands.group(pass_context=True, help="Manage bag of holding")
-    async def bagOfHolding(self, ctx):
+    async def boh(self, ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send('Invalid subcommand')
 
-    @bagOfHolding.command()
-    async def addItem(self, ctx, item: str):
-        self.add_to_bag(ctx.guild, item, 1)
-        await ctx.send(f'{item} successfully added to the Bag of Holding')
-
-    @bagOfHolding.command()
-    async def addItems(self, ctx, item: str, quantity):
+    @boh.command()
+    async def add(self, ctx, item: str, quantity = 1):
         self.add_to_bag(ctx.guild, item, quantity)
         await ctx.send(f'{item}({quantity}) successfully added to the Bag of Holding')
 
-    @bagOfHolding.command()
+    @boh.command()
     async def dump(self, ctx):
         party_bag = self.get_party_bag(ctx.guild)
         if party_bag is None:
@@ -90,29 +85,16 @@ class BagOfHolding(commands.Cog):
 
         await ctx.send(print_string)
 
-    @bagOfHolding.command()
-    async def removeItem(self, ctx, item: str):
-        result = self.remove_from_bag(ctx.guild, item, 1)
-        await ctx.send(f'{item} removed from the Bag of Holding')
-        if result == 1:
-            await ctx.send(f'{item} removed from the Bag of Holding')
-        else:
-            await ctx.send(f'{item} not found')
 
-    @bagOfHolding.command()
-    async def removeItems(self, ctx, item: str, quantity):
+    @boh.command()
+    async def remove(self, ctx, item: str, quantity = 1):
         result = self.remove_from_bag(ctx.guild, item, quantity)
         if result == 1:
             await ctx.send(f'{item}({quantity}) removed from the Bag of Holding')
         else:
             await ctx.send(f'{item} not found')
 
-    @bagOfHolding.command(hidden=True)
-    async def fix(self, ctx):
-        admins = YAMLConfigReader('/config/administration.yml').data.admins
-        if not str(ctx.author) in admins:
-            return
-        await ctx.send('Fix run on server')
+
 
 def setup(bot):
     """Add the extension as a cog"""

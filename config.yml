@@ -1,6 +1,6 @@
 database:
-  dev: /data/dnd_party_bot_database_dev.db
-  release: /data/dnd_party_bot_database.db
+  dev: /data/grilvum_database_dev.db
+  release: /data/grilvum_database.db
 extensions:
   - addons.admin_commands
   - addons.error_handling

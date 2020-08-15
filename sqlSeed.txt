@@ -1,9 +1,14 @@
 
 
 
+CREATE TABLE "bag_of_holding_items" (
+        "ID" INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
+		"Bag_ID" INTEGER,
+        "Item" CHAR,
+        "Quantity" INTEGER,
+			FOREIGN KEY(Bag_ID) REFERENCES bag_of_holding(ID));
 CREATE TABLE "bag_of_holding" (
         "ID" INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
 		"Guild_ID" INTEGER,
-        "Item" CHAR,
-        "Quantity" INTEGER
-			FOREIGN KEY(Guild_ID) REFERENCES server(ID))
+        "Name" CHAR,
+			FOREIGN KEY(Guild_ID) REFERENCES server(ID));

@@ -10,49 +10,76 @@ class BagOfHolding(commands.Cog):
         self.bot = bot
         self.config = YAMLConfigReader()
 
-    def get_party_bag(self, guild):
+    def get_party_bag(self, guild, name):
         conn = sqlite3.connect(self.config.data.database)
         try:
             cur = conn.cursor()
-            cur.execute("SELECT Item, Quantity FROM bag_of_holding WHERE Guild_ID IS ?",
-                        (guild.id,))
+            cur.execute("SELECT Item, Quantity FROM bag_of_holding_items WHERE Bag_ID IN (SELECT ID FROM bag_of_holding WHERE Name = ? and Guild_ID = ?)", (name, guild.id))
             result = cur.fetchall()
         finally:
             conn.close()
-        return result if len(result) > 0 else None
+        return result 
 
-    def add_to_bag(self, guild, item, quantity):
+    def add_bag(self, guild, name):
         conn = sqlite3.connect(self.config.data.database)
         try:
             cur = conn.cursor()
-            cur.execute("SELECT Quantity FROM bag_of_holding WHERE Item IS ? AND Guild_ID = ?",
-                        (item, guild.id))
-            result = cur.fetchone()
-            if result is not None:
-                cur.execute("UPDATE bag_of_holding SET Quantity = ? WHERE Item IS ? AND Guild_ID = ?",
-                            (int(result[0]) + int(quantity), item, guild.id))
-
+            cur.execute("SELECT ID FROM bag_of_holding WHERE Guild_ID = ? and NAME = ?",(guild.id, name))
+            result = cur.fetchall()
+            if len(result) == 0:
+                cur.execute("INSERT INTO bag_of_holding VALUES (NULL, ?, ?)", (guild.id, name))
+                return 1
             else:
-                cur.execute("INSERT INTO bag_of_holding (Guild_ID, Item, Quantity) VALUES(?,?,?)",
-                            (guild.id, item, quantity))
-            conn.commit()
+                return 2
+        except:
+            return 0
         finally:
             conn.close()
 
-    def remove_from_bag(self, guild, item, quantity):
+    def remove_bag(self, guild, name):
         conn = sqlite3.connect(self.config.data.database)
         try:
             cur = conn.cursor()
-            cur.execute("SELECT Quantity FROM bag_of_holding WHERE Item IS ? AND Guild_ID = ?",
-                        (item, guild.id))
+            cur.execute("SELECT ID FROM bag_of_holding WHERE Guild_ID = ? and NAME = ?",(guild.id, name))
+            result = cur.fetchall()
+            if len(result) > 0:
+                cur.execute("DELETE FROM bag_of_holding WHERE Name = ? and Guild_ID = ?", (name, guild.id))   
+                return 1
+            else:
+                return 2
+        except:
+            return 0
+        finally:
+            conn.close()
+
+    def add_to_bag(self, guild, name, item, quantity):
+        conn = sqlite3.connect(self.config.data.database)
+        try:
+            cur = conn.cursor()       
+            cur.execute("SELECT Quantity FROM bag_of_holding_items WHERE Item = ? AND Bag_ID IN (SELECT ID FROM bag_of_holding WHERE Name = ? and Guild_ID = ?)", (item, name, guild.id))
+            result = cur.fetchone()
+            if result is not None:
+                cur.execute("UPDATE bag_of_holding_items SET Quantity = ? WHERE Item = ? AND Bag_ID IN (SELECT ID FROM bag_of_holding WHERE Name = ? and Guild_ID = ?)", (int(result[0]) + int(quantity), item, name, guild.id))
+            else:
+                cur.execute("UPDATE bag_of_holding_items SET Quantity = ? WHERE Item = ? AND Bag_ID IN (SELECT ID FROM bag_of_holding WHERE Name = ? and Guild_ID = ?)", (quantity, item, name, guild.id))
+            conn.commit()
+            return 1
+        except:
+            return 0
+        finally:
+            conn.close()
+
+    def remove_from_bag(self, guild, name, item, quantity):
+        conn = sqlite3.connect(self.config.data.database)
+        try:
+            cur = conn.cursor()        
+            cur.execute("SELECT Quantity FROM bag_of_holding_items WHERE Item = ? AND Bag_ID = (SELECT ID FROM bag_of_holding WHERE Name = ? and Guild_ID = ?)", (item, name, guild.id))
             result = cur.fetchone()
             if result is not None:
                 if int(result[0]) - int(quantity) < 1:
-                    cur.execute("DELETE FROM bag_of_holding WHERE Item = ? AND Guild_ID = ?",
-                                (item, guild.id))
+                    cur.execute("DELETE FROM bag_of_holding_items WHERE Item = ? AND Bag_ID = (SELECT ID FROM bag_of_holding WHERE Name = ? and Guild_ID = ?)", (item, name, guild.id))
                 else:
-                    cur.execute("UPDATE bag_of_holding SET Quantity = ? WHERE Item IS ? AND Guild_ID = ?",
-                                (int(result[0]) - int(quantity), item, guild.id))
+                    cur.execute("UPDATE bag_of_holding_items SET Quantity = ? WHERE Item = ? AND Bag_ID = (SELECT ID FROM bag_of_holding WHERE Name = ? and Guild_ID = ?)", (int(result[0]) - int(quantity), item, name, guild.id))
             else:
                 return 0
             conn.commit()
@@ -66,18 +93,44 @@ class BagOfHolding(commands.Cog):
             await ctx.send('Invalid subcommand')
 
     @boh.command()
-    async def add(self, ctx, item: str, quantity = 1):
-        self.add_to_bag(ctx.guild, item, quantity)
-        await ctx.send(f'{item}({quantity}) successfully added to the Bag of Holding')
+    async def addBag(self, ctx, name):
+        result = self.add_bag(ctx.guild, name)
+        if result == 1:
+            await ctx.send(f'{name} successfully added to your party.')
+        elif result == 2:
+            await ctx.send(f'{name} already ex=ts.')
+        else:
+            await ctx.send(f'Error adding {name} to your party.')
+
 
     @boh.command()
-    async def dump(self, ctx):
-        party_bag = self.get_party_bag(ctx.guild)
+    async def removeBag(self, ctx, name):
+        result = self.remove_bag(ctx.guild, name)
+        if result == 1:
+            await ctx.send(f'{name} successfully removed to your party.')
+        elif result == 2:
+            await ctx.send(f'{name} not found.')
+        else:
+            await ctx.send(f'Error removing {name} from your party.')
+
+    @boh.command()
+    async def add(self, ctx, name, item: str, quantity = 1):
+        result = self.add_to_bag(ctx.guild, name, item, quantity)
+        await ctx.send(f'{result}')
+        if result == 1:
+            await ctx.send(f'{item}({quantity}) successfully added to the Bag of Holding')
+        else:
+            await ctx.send(f'Error adding {item}({quantity}) to {name}')
+
+
+    @boh.command()
+    async def dump(self, ctx, name):
+        party_bag = self.get_party_bag(ctx.guild, name)
         if party_bag is None:
-            await ctx.send('Failed to get party Bag of Holding')
+            await ctx.send(f'Failed to get {name}')
             return
 
-        print_string = 'The Bag of Holding Contains:'
+        print_string = 'The Bag of Holding Contains {}:'.format(len(party_bag))
         for item in party_bag:
             print_string += f'\n{item[0]}'
             if item[1] > 1:
@@ -87,10 +140,10 @@ class BagOfHolding(commands.Cog):
 
 
     @boh.command()
-    async def remove(self, ctx, item: str, quantity = 1):
-        result = self.remove_from_bag(ctx.guild, item, quantity)
+    async def remove(self, ctx, name, item: str, quantity = 1):
+        result = self.remove_from_bag(ctx.guild, name, item, quantity)
         if result == 1:
-            await ctx.send(f'{item}({quantity}) removed from the Bag of Holding')
+            await ctx.send(f'{item}({quantity}) removed from {name}')
         else:
             await ctx.send(f'{item} not found')
 

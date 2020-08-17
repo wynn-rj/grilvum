@@ -16,6 +16,7 @@ class BagOfHolding(commands.Cog):
             cur = conn.cursor()
             cur.execute("SELECT Item, Quantity FROM bag_of_holding_items WHERE Bag_ID IN (SELECT ID FROM bag_of_holding WHERE Name = ? and Guild_ID = ?)", (name, guild.id))
             result = cur.fetchall()
+            conn.commit()
         finally:
             conn.close()
         return result 
@@ -24,10 +25,11 @@ class BagOfHolding(commands.Cog):
         conn = sqlite3.connect(self.config.data.database)
         try:
             cur = conn.cursor()
-            cur.execute("SELECT ID FROM bag_of_holding WHERE Guild_ID = ? and NAME = ?",(guild.id, name))
+            cur.execute("SELECT ID FROM bag_of_holding WHERE Guild_ID = ? AND Name = ?",(guild.id, name))
             result = cur.fetchall()
             if len(result) == 0:
                 cur.execute("INSERT INTO bag_of_holding VALUES (NULL, ?, ?)", (guild.id, name))
+                conn.commit()
                 return 1
             else:
                 return 2
@@ -40,10 +42,11 @@ class BagOfHolding(commands.Cog):
         conn = sqlite3.connect(self.config.data.database)
         try:
             cur = conn.cursor()
-            cur.execute("SELECT ID FROM bag_of_holding WHERE Guild_ID = ? and NAME = ?",(guild.id, name))
+            cur.execute("SELECT ID FROM bag_of_holding WHERE Guild_ID = ? AND Name = ?",(guild.id, name))
             result = cur.fetchall()
             if len(result) > 0:
-                cur.execute("DELETE FROM bag_of_holding WHERE Name = ? and Guild_ID = ?", (name, guild.id))   
+                cur.execute("DELETE FROM bag_of_holding WHERE Name = ? AND Guild_ID = ?", (name, guild.id))   
+                conn.commit()
                 return 1
             else:
                 return 2
@@ -61,11 +64,13 @@ class BagOfHolding(commands.Cog):
             if result is not None:
                 cur.execute("UPDATE bag_of_holding_items SET Quantity = ? WHERE Item = ? AND Bag_ID IN (SELECT ID FROM bag_of_holding WHERE Name = ? and Guild_ID = ?)", (int(result[0]) + int(quantity), item, name, guild.id))
             else:
-                cur.execute("UPDATE bag_of_holding_items SET Quantity = ? WHERE Item = ? AND Bag_ID IN (SELECT ID FROM bag_of_holding WHERE Name = ? and Guild_ID = ?)", (quantity, item, name, guild.id))
+                cur.execute("SELECT ID FROM bag_of_holding WHERE Name = ? AND Guild_ID = ?", (name, guild.id))
+                bag_id = cur.fetchone()
+                if bag_id is None:
+                    return 0
+                cur.execute("INSERT INTO bag_of_holding_items VALUES (NULL, ?, ?, ?)", (bag_id[0], item, quantity))
             conn.commit()
             return 1
-        except:
-            return 0
         finally:
             conn.close()
 
@@ -98,7 +103,7 @@ class BagOfHolding(commands.Cog):
         if result == 1:
             await ctx.send(f'{name} successfully added to your party.')
         elif result == 2:
-            await ctx.send(f'{name} already ex=ts.')
+            await ctx.send(f'{name} already exists.')
         else:
             await ctx.send(f'Error adding {name} to your party.')
 

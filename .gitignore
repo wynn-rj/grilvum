@@ -138,3 +138,4 @@ dmypy.json
 /dnd_party_bot_database.db
 /dnd_party_bot_database.db-journal
 /.vs
+/data

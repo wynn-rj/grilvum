@@ -6,6 +6,7 @@ extensions:
   - addons.error_handling
   - addons.update_commands
   - extensions.party_funds
+  - extensions.bag_of_holding
 prefix: 
   dev: "?"
   release: "!"

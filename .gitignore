@@ -130,3 +130,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+.idea/workspace.xml
+
+
+.idea/
+.idea/workspace.xml
+/dnd_party_bot_database.db
+/dnd_party_bot_database.db-journal
+/.vs
+/data

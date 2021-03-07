@@ -21,3 +21,4 @@ prefix:
 playing: 
   dev: "in development | {prefix}help"
   release: "party packmule | {prefix}help"
+log_on_successful_startup: False
